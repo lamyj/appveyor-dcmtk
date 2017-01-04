@@ -1,0 +1,52 @@
+version: '{build}'
+image: Visual Studio 2015
+platform:
+  - x86
+  - x64
+configuration:
+  - Release
+environment:
+  PROJECT: dcmtk
+  CMAKE_PROJECT: DCMTK
+  VERSION: 3.6.1~20161102
+
+install:
+  - ps: |
+      Start-FileDownload "http://git.dcmtk.org/?p=dcmtk.git;a=snapshot;h=DCMTK-3.6.1_20161102;sf=tgz" dcmtk-3.6.1_20161102.tgz
+      tar -x -f dcmtk-3.6.1_20161102.tgz -C C:\projects
+      move C:\projects\dcmtk-DCMTK-3.6.1_20161102-826e576 "C:\projects\${env:PROJECT}"
+
+before_build: 
+  - ps: |
+      ${env:BUILD_DIRECTORY}="${env:APPVEYOR_BUILD_FOLDER}\build"
+      ${env:INSTALL_DIRECTORY}="${env:APPVEYOR_BUILD_FOLDER}\${env:PROJECT}"
+      New-Item -Path "${env:BUILD_DIRECTORY}" -ItemType "directory"
+      cd "${env:BUILD_DIRECTORY}"
+      ${generator} = "Visual Studio 14 2015"
+      if (${env:PLATFORM} -eq "x64") { ${generator} = "${generator} Win64" }
+      cmake -G "${generator}" -DCMAKE_INSTALL_PREFIX="${env:INSTALL_DIRECTORY}" "C:\projects\${env:PROJECT}"
+
+build_script:
+  - ps: |
+      msbuild "${env:BUILD_DIRECTORY}\${CMAKE_PROJECT}.sln" /m /v:minimal
+      msbuild "${env:BUILD_DIRECTORY}\INSTALL.vcxproj" /m /v:minimal
+
+after_build:
+  - ps: |
+      cd "${env:APPVEYOR_BUILD_FOLDER}"
+      7z a "${env:PROJECT}_${env:VERSION}_${env:PLATFORM}.zip" "${env:PROJECT}"
+
+artifacts:
+  - path: $(PROJECT)_$(VERSION)_$(platform).zip
+
+deploy:
+  release: v$(VERSION)
+  description: "v$(VERSION)"
+  provider: GitHub
+  auth_token:
+    secure: Stag2HnDJZFOF5/29yUlXQNlShCTIbAaAH/JLNnO7pb1AUIPGSnNJI4BykbCxVp2
+  artifact: /.*\.zip/
+  on:
+    branch: master
+    appveyor_repo_tag: true
+
