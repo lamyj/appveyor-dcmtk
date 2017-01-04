@@ -8,7 +8,7 @@ configuration:
 environment:
   PROJECT: dcmtk
   CMAKE_PROJECT: DCMTK
-  VERSION: 3.6.1~20161102
+  VERSION: 3.6.1-20161102-1
 
 install:
   - ps: |
